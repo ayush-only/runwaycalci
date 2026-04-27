@@ -367,7 +367,8 @@
 
   .input-wrap {
   display: flex;
-  align-items: center;  
+  align-items: center; 
+  gap: 6px; 
   background: var(--bg3);
   border: 1px solid var(--border2);
   border-radius: 10px;
@@ -382,6 +383,7 @@
 
   .input-field {
     flex: 1;
+    min-width: 0;
     background: transparent;
     border: none;
     outline: none;
@@ -407,8 +409,7 @@
   color: var(--muted);
   font-family: 'DM Mono', monospace;
 
-  white-space: nowrap;   
-  min-width: 50px;       
+  white-space: nowrap;          
   flex-shrink: 0;        
 }
 
@@ -958,7 +959,7 @@
             </select>
             <div class="input-wrap">
               <input class="input-field" id="burn" type="number" min="0" placeholder="50,000" oninput="calculate()">
-              <span class="input-suffix"></span>
+              <span class="input-suffix">/mo</span>
             </div>
           </div>
         </div>
