@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Runway — Know Your Zero Day</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  /* ── DARK THEME ── */
+  :root {
+    --bg: #080810;
+    --bg2: #0f0f1a;
+    --bg3: #14141f;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8e8f0;
+    --muted: #6b6b80;
+    --muted2: #9898aa;
+    --green: #22d084;
+    --green-dim: rgba(34,208,132,0.12);
+    --amber: #f5a623;
+    --amber-dim: rgba(245,166,35,0.12);
+    --red: #ff4d6a;
+    --red-dim: rgba(255,77,106,0.12);
+    --accent: #7c6dfa;
+    --accent-dim: rgba(124,109,250,0.15);
+    --status: var(--green);
+    --status-dim: var(--green-dim);
+    --bg-input: #14141f;
+    --bg-input-focus: #1a1a28;
+    --shadow: 0 8px 40px rgba(0,0,0,0.5);
+    font-size: 16px;
+  }
+
+  /* ── LIGHT THEME ── */
+  [data-theme="light"] {
+    --bg: #f4f5fb;
+    --bg2: #ffffff;
+    --bg3: #eef0f8;
+    --border: rgba(0,0,0,0.08);
+    --border2: rgba(0,0,0,0.14);
+    --text: #0d1030;
+    --muted: #9099c0;
+    --muted2: #4a5280;
+    --green: #18a361;
+    --green-dim: rgba(24,163,97,0.1);
+    --amber: #c9900d;
+    --amber-dim: rgba(201,144,13,0.1);
+    --red: #d9203c;
+    --red-dim: rgba(217,32,60,0.1);
+    --accent: #4a56e8;
+    --accent-dim: rgba(74,86,232,0.12);
+    --bg-input: #eef0f8;
+    --bg-input-focus: #e8eaf5;
+    --shadow: 0 8px 40px rgba(0,0,0,0.1);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* ── GRID BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,109,250,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,109,250,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+    transition: opacity 0.3s;
+  }
+
+  [data-theme="light"] body::before {
+    background-image:
+      linear-gradient(rgba(74,86,232,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(74,86,232,0.04) 1px, transparent 1px);
+  }
+
+  /* ── LANDING PAGE ── */
+  #landing {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1.5rem;
+    text-align: center;
+  }
+
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    padding: 6px 14px;
+    border: 1px solid rgba(124,109,250,0.3);
+    border-radius: 100px;
+    display: inline-block;
+  }
+
+  .hero-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(3rem, 10vw, 6.5rem);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero-title .accent-word {
+    background: linear-gradient(135deg, #7c6dfa 0%, #22d084 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    font-size: 1.1rem;
+    color: var(--muted2);
+    max-width: 480px;
+    line-height: 1.7;
+    margin-bottom: 3rem;
+  }
+
+  .hero-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--accent);
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 1rem;
+    padding: 14px 28px;
+    border-radius: 100px;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    text-decoration: none;
+  }
+
+  .hero-cta:hover {
+    transform: translateY(-3px) scale(1.04);
+    box-shadow: 0 16px 44px rgba(124,109,250,0.45);
+  }
+
+  .hero-cta:active { transform: translateY(0) scale(0.99); }
+
+  .hero-cta svg { transition: transform 0.2s; }
+  .hero-cta:hover svg { transform: translateX(4px); }
+
+  .hero-stats {
+    display: flex;
+    gap: 2.5rem;
+    margin-top: 4rem;
+    padding-top: 4rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .hero-stat-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.8rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .hero-stat-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  /* ── APP PAGE ── */
+  #app {
+    display: none;
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+    padding: 0 0 4rem;
+  }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 2rem;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,8,16,0.85);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  [data-theme="light"] .app-header {
+    background: rgba(244,245,251,0.88);
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.25rem;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #7c6dfa 0%, #22d084 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px var(--accent);
+    animation: pulse-dot-logo 2.5s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  @keyframes pulse-dot-logo {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:0.5; transform:scale(0.8); }
+  }
+
+  .header-right { display: flex; align-items: center; gap: 10px; }
+
+  .back-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: none;
+    transition: color 0.2s, border-color 0.2s, transform 0.15s, box-shadow 0.15s;
+  }
+
+  .back-btn:hover {
+    color: var(--text);
+    border-color: var(--border2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+
+  .back-btn:active { transform: translateY(0); }
+
+  .theme-btn {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--muted2);
+    padding: 6px 14px;
+    border-radius: 100px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.15s, box-shadow 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .theme-btn:hover {
+    border-color: var(--border2);
+    color: var(--text);
+    background: var(--bg-input-focus);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.15);
+  }
+
+  .theme-btn:active { transform: translateY(0); }
+
+  .app-body {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem;
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  @media (max-width: 800px) {
+    .app-body { grid-template-columns: 1fr; padding: 1.5rem 1rem; }
+    .hero-stats { gap: 1.5rem; }
+  }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+    box-shadow: var(--shadow);
+  }
+
+  .card:hover { border-color: var(--border2); }
+
+  .card-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  /* ── INPUTS ── */
+  .input-group { margin-bottom: 1.25rem; }
+
+  .input-label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted2);
+    margin-bottom: 6px;
+    font-weight: 500;
+  }
+
+  .input-row { display: flex; gap: 8px; align-items: stretch; }
+
+  /* Currency select per-field */
+  .currency-select {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    padding: 0 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    outline: none;
+    min-width: 74px;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    appearance: none;
+    text-align: center;
+  }
+
+  .currency-select:hover,
+  .currency-select:focus {
+    border-color: var(--accent);
+    background: var(--bg-input-focus);
+    box-shadow: 0 0 0 3px rgba(124,109,250,0.12);
+  }
+
+  .input-wrap {
+  display: flex;
+  align-items: center;  
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  overflow: hidden;
+  flex: 1;
+}
+
+  .input-wrap:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,109,250,0.12);
+  }
+
+  .input-field {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    padding: 0 14px;
+    height: 46px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  .input-field::placeholder { color: var(--muted); font-weight: 400; }
+  .input-field::-webkit-inner-spin-button,
+  .input-field::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  .input-suffix {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
+  padding: 0 10px;
+  font-size: 0.75rem;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+
+  white-space: nowrap;   
+  min-width: 50px;       
+  flex-shrink: 0;        
+}
+
+  /* Exchange notice */
+  .exchange-notice {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: var(--bg3);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    line-height: 1.5;
+    display: none;
+  }
+
+  /* Display currency row */
+  .display-currency-row {
+    margin-top: 0.5rem;
+  }
+
+  .display-currency-full {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 10px;
+    height: 46px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.85rem;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .display-currency-full:hover,
+  .display-currency-full:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(124,109,250,0.12);
+  }
+
+  /* Calculate button */
+  .calc-btn {
+    width: 100%;
+    margin-top: 1.25rem;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1rem;
+    letter-spacing: 0.01em;
+    padding: 14px 24px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .calc-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .calc-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 32px rgba(124,109,250,0.4);
+  }
+
+  .calc-btn:hover::before { opacity: 1; }
+  .calc-btn:active { transform: translateY(0); box-shadow: none; }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1rem 0;
+  }
+
+  /* ── STATUS DISPLAY ── */
+  #status-card {
+    border-color: var(--status);
+    background: var(--status-dim);
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.5s, background 0.5s, box-shadow 0.5s;
+  }
+
+  #status-card.state-red {
+    animation: urgentPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes urgentPulse {
+    0%,100% { box-shadow: var(--shadow), 0 0 40px var(--red-dim); }
+    50% { box-shadow: var(--shadow), 0 0 70px rgba(255,77,106,0.3); }
+  }
+
+  #status-card::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -30%;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: var(--status);
+    opacity: 0.04;
+    pointer-events: none;
+    transition: background 0.5s;
+  }
+
+  .runway-number {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(3.5rem, 8vw, 5rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    color: var(--status);
+    line-height: 1;
+    transition: color 0.5s;
+  }
+
+  .runway-unit {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--muted2);
+    margin-top: 4px;
+    letter-spacing: 0.08em;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.06em;
+    background: var(--status-dim);
+    color: var(--status);
+    border: 1px solid var(--status);
+    transition: all 0.5s;
+    margin-bottom: 1rem;
+  }
+
+  .status-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--status);
+    animation: pulse-dot 2s infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  /* ── GAUGE BAR ── */
+  .gauge-wrap { margin: 1.25rem 0; position: relative; }
+
+  .gauge-track {
+    height: 6px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+
+  [data-theme="light"] .gauge-track { background: rgba(0,0,0,0.08); }
+
+  .gauge-fill {
+    height: 100%;
+    border-radius: 100px;
+    background: var(--status);
+    transition: width 0.7s cubic-bezier(0.4,0,0.2,1), background 0.5s;
+    width: 0%;
+  }
+
+  .gauge-markers { display: flex; justify-content: space-between; margin-top: 5px; }
+
+  .gauge-marker {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    color: var(--muted);
+  }
+
+  /* ── MINI STATS ── */
+  .mini-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .mini-stat {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.875rem 1rem;
+    transition: background 0.3s, border-color 0.3s;
+  }
+
+  [data-theme="light"] .mini-stat { background: rgba(0,0,0,0.02); }
+
+  .mini-stat-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .mini-stat-label { font-size: 0.7rem; color: var(--muted); margin-top: 3px; }
+
+  /* ── MILESTONES ── */
+  .milestones { margin-top: 1rem; }
+  .milestone-title {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 10px;
+  }
+  .milestone-list { display: flex; flex-direction: column; gap: 6px; }
+  .milestone-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg3);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.8rem;
+    border: 1px solid transparent;
+    transition: border-color 0.3s, background 0.3s;
+  }
+  .milestone-row.reached { border-color: var(--green); background: var(--green-dim); }
+  .milestone-row.reached .m-month { color: var(--green); }
+  .milestone-m { font-family: 'DM Mono', monospace; color: var(--muted2); font-size: 0.78rem; }
+  .milestone-icon { font-size: 0.9rem; }
+  .m-month { font-family: 'DM Mono', monospace; font-size: 0.75rem; font-weight: 500; color: var(--muted); }
+
+  /* ── RIGHT COLUMN ── */
+  .right-col { display: flex; flex-direction: column; gap: 1.5rem; }
+
+  /* ── PROJECTION TABLE ── */
+  .proj-table { width: 100%; border-collapse: collapse; }
+
+  .proj-table th {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    text-align: left;
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .proj-table td {
+    padding: 10px 0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  .proj-table tr:last-child td { border-bottom: none; }
+
+  .proj-month { color: var(--muted2); font-family: 'DM Mono', monospace; font-size: 0.8rem; }
+  .proj-cash { color: var(--text); font-family: 'DM Mono', monospace; font-weight: 500; }
+
+  .proj-bar-wrap {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 100px;
+    overflow: hidden;
+  }
+
+  [data-theme="light"] .proj-bar-wrap { background: rgba(0,0,0,0.06); }
+
+  .proj-bar-fill { height: 100%; border-radius: 100px; transition: width 0.4s; }
+
+  /* ── CHART ── */
+  .chart-wrap { position: relative; width: 100%; height: 220px; }
+
+  /* ── SCENARIO PLANNER ── */
+  .scenario-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+  @media (max-width: 500px) { .scenario-grid { grid-template-columns: 1fr; } }
+
+  .scenario-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, transform 0.15s, box-shadow 0.15s;
+  }
+
+  .scenario-card:hover {
+    border-color: var(--accent);
+    background: rgba(124,109,250,0.05);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124,109,250,0.15);
+  }
+
+  .scenario-card:active { transform: translateY(0); }
+
+  .scenario-icon { font-size: 1.2rem; margin-bottom: 6px; }
+  .scenario-title { font-size: 0.82rem; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+  .scenario-result { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--accent); }
+
+  /* ── TIPS ── */
+  .tip-list { list-style: none; }
+
+  .tip-item {
+    display: flex;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.83rem;
+    color: var(--muted2);
+    line-height: 1.5;
+  }
+
+  .tip-item:last-child { border-bottom: none; }
+  .tip-icon { flex-shrink: 0; margin-top: 1px; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 160px;
+    color: var(--muted);
+    font-size: 0.85rem;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .empty-icon { font-size: 2rem; opacity: 0.3; }
+
+  /* ── COUNTER ANIMATION ── */
+  @keyframes count-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-in { animation: count-up 0.4s ease forwards; }
+
+  /* ── SHARE ── */
+  .share-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(124,109,250,0.3);
+    color: var(--accent);
+    font-size: 0.8rem;
+    font-family: 'DM Mono', monospace;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.15s;
+    letter-spacing: 0.04em;
+  }
+
+  .share-btn:hover {
+    background: rgba(124,109,250,0.22);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(124,109,250,0.2);
+  }
+
+  .share-btn:active { transform: translateY(0); }
+
+  /* ── ZERO DATE ── */
+  .zero-date {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-top: 1rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--muted2);
+  }
+
+  [data-theme="light"] .zero-date { background: rgba(0,0,0,0.02); }
+
+  .zero-date strong { color: var(--status); transition: color 0.5s; }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 10px;
+    padding: 10px 20px;
+    font-size: 0.83rem;
+    font-family: 'DM Mono', monospace;
+    color: var(--text);
+    opacity: 0;
+    transition: all 0.3s;
+    z-index: 999;
+    white-space: nowrap;
+  }
+
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── LANDING THEME BTN ── */
+  .landing-theme-btn {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 100;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    color: var(--muted2);
+    padding: 7px 14px;
+    border-radius: 100px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s, background 0.2s, transform 0.15s, box-shadow 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .landing-theme-btn:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(124,109,250,0.2);
+  }
+
+  .landing-theme-btn:active { transform: translateY(0); }
+
+  @media (max-width: 800px) {
+    .landing-theme-btn { top: 1rem; right: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     LANDING PAGE
+══════════════════════════════════════════ -->
+<button class="landing-theme-btn" id="landingThemeBtn">☀️ Light Mode</button>
+
+<section id="landing">
+  <p class="hero-eyebrow">Runway Calculator · For Founders</p>
+  <h1 class="hero-title">
+    Know your<br>
+    <span class="accent-word">zero day</span>
+  </h1>
+  <p class="hero-sub">
+    Cash is king. Most startups don't fail from bad ideas — they fail because they ran out of time. Know exactly when your runway ends before it's too late.
+  </p>
+  <button class="hero-cta" onclick="showApp()">
+    Calculate My Runway
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+
+  <div class="hero-stats">
+    <div>
+      <div class="hero-stat-value">6mo</div>
+      <div class="hero-stat-label">Safe threshold</div>
+    </div>
+    <div>
+      <div class="hero-stat-value">3mo</div>
+      <div class="hero-stat-label">Danger zone</div>
+    </div>
+    <div>
+      <div class="hero-stat-value">~20%</div>
+      <div class="hero-stat-label">Startups fail: cash</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     CALCULATOR APP
+══════════════════════════════════════════ -->
+<section id="app">
+  <header class="app-header">
+    <div class="logo">
+      <div class="logo-dot"></div>
+      Runway
+    </div>
+    <div class="header-right">
+      <button class="theme-btn" id="appThemeBtn">☀️ Light</button>
+      <button class="back-btn" onclick="showLanding()">← Back</button>
+    </div>
+  </header>
+
+  <div class="app-body">
+
+    <!-- LEFT: INPUTS + STATUS -->
+    <div class="left-col">
+
+      <!-- Inputs Card -->
+      <div class="card" style="margin-bottom:1.5rem;">
+        <div class="card-label">Financial Inputs</div>
+
+        <!-- Total Cash on Hand -->
+        <div class="input-group">
+          <label class="input-label" for="cash">Total Cash on Hand</label>
+          <div class="input-row">
+            <select class="currency-select" id="currencyCash" title="Currency for cash">
+              <option value="USD">$ USD</option>
+              <option value="EUR">€ EUR</option>
+              <option value="INR" selected>₹ INR</option>
+              <option value="GBP">£ GBP</option>
+            </select>
+            <div class="input-wrap">
+              <input class="input-field" id="cash" type="number" min="0" placeholder="500,000" oninput="calculate()">
+            </div>
+          </div>
+        </div>
+
+        <!-- Monthly Burn Rate -->
+        <div class="input-group">
+          <label class="input-label" for="burn">Monthly Burn Rate</label>
+          <div class="input-row">
+            <select class="currency-select" id="currencyBurn" title="Currency for burn rate">
+              <option value="USD">$ USD</option>
+              <option value="EUR">€ EUR</option>
+              <option value="INR" selected>₹ INR</option>
+              <option value="GBP">£ GBP</option>
+            </select>
+            <div class="input-wrap">
+              <input class="input-field" id="burn" type="number" min="0" placeholder="50,000" oninput="calculate()">
+              <span class="input-suffix"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Monthly Revenue -->
+        <div class="input-group" style="margin-bottom:0.5rem;">
+          <label class="input-label" for="revenue">Monthly Revenue</label>
+          <div class="input-row">
+            <select class="currency-select" id="currencyRevenue" title="Currency for revenue">
+              <option value="USD">$ USD</option>
+              <option value="EUR">€ EUR</option>
+              <option value="INR" selected>₹ INR</option>
+              <option value="GBP">£ GBP</option>
+            </select>
+            <div class="input-wrap">
+              <input class="input-field" id="revenue" type="number" min="0" placeholder="0" oninput="calculate()" style="font-size:0.88rem;">
+            </div>
+          </div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:5px;">Net burn = Burn − Revenue</div>
+          <div class="exchange-notice" id="exchangeNotice"></div>
+        </div>
+
+        <!-- Display Currency -->
+        <div class="input-group display-currency-row">
+          <label class="input-label" for="displayCurrency">Display Currency</label>
+          <select class="display-currency-full" id="displayCurrency">
+            <option value="USD">$ USD — US Dollar</option>
+            <option value="EUR">€ EUR — Euro</option>
+            <option value="INR" selected>₹ INR — Indian Rupee</option>
+            <option value="GBP">£ GBP — British Pound</option>
+          </select>
+        </div>
+
+        <button class="calc-btn" id="calcBtn" onclick="calculate()">Calculate Runway →</button>
+      </div>
+
+      <!-- Status Card -->
+      <div class="card" id="status-card">
+        <div id="status-badge" class="status-badge">
+          <span class="status-dot"></span>
+          <span id="status-label">Safe</span>
+        </div>
+
+        <div id="runway-display">
+          <div class="empty-state">
+            <div class="empty-icon">💰</div>
+            <div>Enter your numbers above to see your runway</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scenario Planner -->
+      <div class="card" id="scenario-card" style="display:none;">
+        <div class="card-label">What-If Scenarios</div>
+        <div class="scenario-grid" id="scenarios"></div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT: CHART + TABLE -->
+    <div class="right-col">
+
+      <!-- Chart Card -->
+      <div class="card" id="chart-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+          <div class="card-label" style="margin-bottom:0;">Cash Depletion Over Time</div>
+          <button class="share-btn" onclick="shareResults()" id="share-btn" style="display:none;">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6V10H10V6M6 1V7M6 1L4 3M6 1L8 3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Share
+          </button>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="cashChart" role="img" aria-label="Cash depletion chart showing runway over months"></canvas>
+        </div>
+      </div>
+
+      <!-- Monthly Projection Table -->
+      <div class="card" id="table-card">
+        <div class="card-label">Monthly Projections</div>
+        <div id="proj-table-wrap">
+          <div class="empty-state">
+            <div class="empty-icon">📊</div>
+            <div>Projections will appear here</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Survival Tips -->
+      <div class="card">
+        <div class="card-label">Survival Playbook</div>
+        <ul class="tip-list">
+          <li class="tip-item">
+            <span class="tip-icon">🔥</span>
+            <span><strong style="color:var(--text);">Extend by cutting.</strong> Reducing burn by 20% often adds 2–3 months of runway — faster than raising.</span>
+          </li>
+          <li class="tip-item">
+            <span class="tip-icon">⚡</span>
+            <span><strong style="color:var(--text);">Start raising at 6 months.</strong> A fundraising round takes 3–6 months to close. Never start too late.</span>
+          </li>
+          <li class="tip-item">
+            <span class="tip-icon">📈</span>
+            <span><strong style="color:var(--text);">Revenue is the best runway.</strong> Even $5K MRR meaningfully extends how long you can operate.</span>
+          </li>
+          <li class="tip-item">
+            <span class="tip-icon">🎯</span>
+            <span><strong style="color:var(--text);">Target 18+ months.</strong> Investors want to see you have time to hit milestones, not just survive.</span>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ═══════════════════════════════════════
+  // EXCHANGE RATES (USD base, illustrative)
+  // ═══════════════════════════════════════
+  const FX = { USD: 1, EUR: 0.85, INR: 94.12, GBP: 0.74 };
+  const SYMBOLS = { USD: '$', EUR: '€', INR: '₹', GBP: '£' };
+
+  function toUSD(amount, currency) { return amount / FX[currency]; }
+  function fromUSD(amount, currency) { return amount * FX[currency]; }
+
+  let chartInstance = null;
+
+  // ═══════════════════════════════════════
+  // THEME
+  // ═══════════════════════════════════════
+  let isDark = true;
+
+  function toggleTheme() {
+    isDark = !isDark;
+    const theme = isDark ? 'dark' : 'light';
+    document.documentElement.setAttribute('data-theme', theme);
+    const label = isDark ? '☀️ Light Mode' : '🌙 Dark Mode';
+    document.getElementById('landingThemeBtn').textContent = label;
+    const appLabel = isDark ? '☀️ Light' : '🌙 Dark';
+    document.getElementById('appThemeBtn').textContent = appLabel;
+    if (chartInstance) updateChartTheme();
+  }
+
+  document.getElementById('landingThemeBtn').addEventListener('click', toggleTheme);
+  document.getElementById('appThemeBtn').addEventListener('click', toggleTheme);
+
+  // ═══════════════════════════════════════
+  // NAVIGATION
+  // ═══════════════════════════════════════
+  function showApp() {
+  document.getElementById('landing').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+
+  
+  document.getElementById('landingThemeBtn').style.display = 'none';
+
+  document.getElementById('cash').focus();
+}
+
+function showLanding() {
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('landing').style.display = 'flex';
+
+  
+  document.getElementById('landingThemeBtn').style.display = 'flex';
+}
+  // ═══════════════════════════════════════
+  // EXCHANGE NOTICE
+  // ═══════════════════════════════════════
+  function updateExchangeNotice() {
+    const cCash = document.getElementById('currencyCash').value;
+    const cBurn = document.getElementById('currencyBurn').value;
+    const cRev  = document.getElementById('currencyRevenue').value;
+    const cDisp = document.getElementById('displayCurrency').value;
+    const notice = document.getElementById('exchangeNotice');
+    const mixed = new Set([cCash, cBurn, cRev, cDisp]);
+    if (mixed.size > 1) {
+      const lines = [];
+      for (const c of mixed) {
+        if (c !== 'USD') lines.push(`1 USD = ${FX[c]} ${c}`);
+      }
+      notice.style.display = 'block';
+      notice.textContent = '⚡ Auto-converting: ' + (lines.length ? lines.join(' · ') : 'all in same currency');
+    } else {
+      notice.style.display = 'none';
+    }
+    calculate();
+  }
+
+  ['currencyCash','currencyBurn','currencyRevenue','displayCurrency'].forEach(id => {
+    document.getElementById(id).addEventListener('change', updateExchangeNotice);
+  });
+
+  // ═══════════════════════════════════════
+  // FORMATTING
+  // ═══════════════════════════════════════
+  function fmt(n, currency) {
+    const sym = SYMBOLS[currency] || '₹';
+    const abs = Math.abs(n);
+    if (currency === 'INR') {
+      if (abs >= 1e7) return sym + (n/1e7).toFixed(1) + 'Cr';
+      if (abs >= 1e5) return sym + (n/1e5).toFixed(1) + 'L';
+      return sym + Math.round(n).toLocaleString('en-IN');
+    }
+    if (abs >= 1e9) return sym + (n/1e9).toFixed(2) + 'B';
+    if (abs >= 1e6) return sym + (n/1e6).toFixed(2) + 'M';
+    if (abs >= 1e3) return sym + n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    return sym + Math.round(n).toLocaleString();
+  }
+
+  function getDisplayCurrency() {
+    return document.getElementById('displayCurrency').value;
+  }
+
+  function getZeroDate(months) {
+    const d = new Date();
+    d.setMonth(d.getMonth() + Math.floor(months));
+    const days = Math.round((months % 1) * 30);
+    d.setDate(d.getDate() + days);
+    return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric', day: 'numeric' });
+  }
+
+  function getMonthLabel(offset) {
+    const d = new Date();
+    d.setMonth(d.getMonth() + offset);
+    return d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+  }
+
+  // ═══════════════════════════════════════
+  // STATUS THRESHOLDS
+  // ═══════════════════════════════════════
+  function setStatus(months) {
+    const root = document.documentElement;
+    const label = document.getElementById('status-label');
+    const statusCard = document.getElementById('status-card');
+
+    statusCard.classList.remove('state-red');
+
+    if (months >= 6) {
+      root.style.setProperty('--status', 'var(--green)');
+      root.style.setProperty('--status-dim', 'var(--green-dim)');
+      label.textContent = 'Safe Zone';
+    } else if (months >= 3) {
+      root.style.setProperty('--status', 'var(--amber)');
+      root.style.setProperty('--status-dim', 'var(--amber-dim)');
+      label.textContent = 'Warning Zone';
+    } else {
+      root.style.setProperty('--status', 'var(--red)');
+      root.style.setProperty('--status-dim', 'var(--red-dim)');
+      label.textContent = 'Danger Zone';
+      statusCard.classList.add('state-red');
+    }
+  }
+
+  // ═══════════════════════════════════════
+  // CALCULATE
+  // ═══════════════════════════════════════
+  function calculate() {
+    const cashRaw = parseFloat(document.getElementById('cash').value) || 0;
+    const burnRaw = parseFloat(document.getElementById('burn').value) || 0;
+    const revRaw  = parseFloat(document.getElementById('revenue').value) || 0;
+    const cCash = document.getElementById('currencyCash').value;
+    const cBurn = document.getElementById('currencyBurn').value;
+    const cRev  = document.getElementById('currencyRevenue').value;
+    const cDisp = getDisplayCurrency();
+
+    if (!cashRaw || !burnRaw) { resetDisplay(); return; }
+
+    // Convert all to USD then to display currency
+    const cashUSD = toUSD(cashRaw, cCash);
+    const burnUSD = toUSD(burnRaw, cBurn);
+    const revUSD  = toUSD(revRaw,  cRev);
+    const netBurnUSD = Math.max(burnUSD - revUSD, 0);
+
+    if (netBurnUSD === 0) {
+      const runway = Infinity;
+      renderResult(cashUSD, burnUSD, revUSD, 0, 120, cDisp);
+      return;
+    }
+
+    const runway = cashUSD / netBurnUSD;
+    const months = Math.min(runway, 120);
+    renderResult(cashUSD, burnUSD, revUSD, netBurnUSD, months, cDisp);
+  }
+
+  function renderResult(cashUSD, burnUSD, revUSD, netBurnUSD, months, cDisp) {
+    const runwayMonths = Math.floor(months);
+    const runwayDays   = Math.round((months % 1) * 30);
+    const dailyBurnUSD = netBurnUSD / 30;
+    const zeroDate = getZeroDate(months);
+    const gaugePercent = Math.min(100, (months / 24) * 100);
+    const isInfinite = months >= 119;
+
+    setStatus(months);
+    document.getElementById('share-btn').style.display = 'flex';
+
+    // Convert for display
+    const cashDisp    = fromUSD(cashUSD, cDisp);
+    const burnDisp    = fromUSD(burnUSD, cDisp);
+    const revDisp     = fromUSD(revUSD, cDisp);
+    const netBurnDisp = fromUSD(netBurnUSD, cDisp);
+    const dailyDisp   = fromUSD(dailyBurnUSD, cDisp);
+
+    // Milestones
+    const milestones = [
+      { label: 'Breathe — 3 Months', m: 3, icon: '😮‍💨' },
+      { label: 'Warning cleared — 6 Months', m: 6, icon: '✅' },
+      { label: 'Fundraise safe — 12 Months', m: 12, icon: '🚀' },
+      { label: 'Default alive — 18 Months', m: 18, icon: '🏆' },
+    ];
+
+    const milestonesHtml = milestones.map(ms => {
+      const reached = months >= ms.m;
+      const d = new Date(Date.now() + ms.m * 30.44 * 86400000);
+      const dateStr = d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      return `<div class="milestone-row ${reached ? 'reached' : ''}">
+        <span class="milestone-icon">${ms.icon}</span>
+        <span class="milestone-m">${ms.label}</span>
+        <span class="m-month">${reached ? '✓ Reached' : dateStr}</span>
+      </div>`;
+    }).join('');
+
+    const displayHTML = `
+      <div class="animate-in">
+        <div class="runway-number">${isInfinite ? '∞' : runwayMonths}<span style="font-size:1.8rem;opacity:0.6;">${!isInfinite && runwayDays > 0 ? '.' + runwayDays : ''}</span></div>
+        <div class="runway-unit">MONTHS RUNWAY${isInfinite ? ' (cash flow positive!)' : ' · ' + Math.round(months * 30.44) + ' days'}</div>
+
+        ${!isInfinite ? `
+        <div class="gauge-wrap">
+          <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:6px;">
+            <span>0</span><span style="color:var(--red);">3mo</span><span style="color:var(--amber);">6mo</span><span>12mo</span><span>24mo</span>
+          </div>
+          <div class="gauge-track">
+            <div class="gauge-fill" id="gaugeFill" style="width:0%"></div>
+          </div>
+        </div>
+
+        <div class="zero-date">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5" stroke="currentColor" stroke-width="1.2"/><path d="M6 4V6.5L7.5 8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Zero day: <strong>${zeroDate}</strong>
+        </div>
+        ` : ''}
+
+        <div class="mini-stats">
+          <div class="mini-stat">
+            <div class="mini-stat-value">${fmt(netBurnDisp, cDisp)}</div>
+            <div class="mini-stat-label">Net monthly burn</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-value">${fmt(dailyDisp * 7, cDisp)}</div>
+            <div class="mini-stat-label">Weekly spend</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-value">${fmt(dailyDisp, cDisp)}</div>
+            <div class="mini-stat-label">Daily burn rate</div>
+          </div>
+          <div class="mini-stat">
+            <div class="mini-stat-value">${revUSD > 0 ? ((revUSD/burnUSD)*100).toFixed(0)+'%' : '0%'}</div>
+            <div class="mini-stat-label">Burn coverage</div>
+          </div>
+        </div>
+
+        ${!isInfinite ? `
+        <div class="milestones" style="margin-top:1rem;">
+          <div class="milestone-title">Milestones</div>
+          <div class="milestone-list">${milestonesHtml}</div>
+        </div>
+        ` : ''}
+      </div>`;
+
+    document.getElementById('runway-display').innerHTML = displayHTML;
+
+    // Animate gauge
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const gf = document.getElementById('gaugeFill');
+        if (gf) gf.style.width = gaugePercent.toFixed(1) + '%';
+      });
+    });
+
+    updateChart(cashUSD, netBurnUSD, Math.min(runwayMonths + 2, 24), cDisp);
+    updateTable(cashUSD, netBurnUSD, Math.min(runwayMonths + 1, 18), cDisp);
+    updateScenarios(cashUSD, burnUSD, revUSD, months, cDisp);
+
+    document.getElementById('scenario-card').style.display = 'block';
+  }
+
+  function resetDisplay() {
+    document.getElementById('runway-display').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">💰</div>
+        <div>Enter your numbers above to see your runway</div>
+      </div>`;
+    document.getElementById('proj-table-wrap').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📊</div>
+        <div>Projections will appear here</div>
+      </div>`;
+    document.getElementById('scenario-card').style.display = 'none';
+    document.getElementById('share-btn').style.display = 'none';
+    document.documentElement.style.setProperty('--status', 'var(--green)');
+    document.documentElement.style.setProperty('--status-dim', 'var(--green-dim)');
+    document.getElementById('status-label').textContent = 'Safe';
+    document.getElementById('status-card').classList.remove('state-red');
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  }
+
+  // ═══════════════════════════════════════
+  // CHART
+  // ═══════════════════════════════════════
+  function updateChart(cashUSD, netBurnUSD, maxMonths, cDisp) {
+    const labels = [];
+    const data   = [];
+    const barsData = [];
+    const colors = [];
+
+    for (let i = 0; i <= maxMonths; i++) {
+      const remUSD = Math.max(0, cashUSD - netBurnUSD * i);
+      const remDisp = fromUSD(remUSD, cDisp);
+      labels.push(i === 0 ? 'Now' : getMonthLabel(i));
+      data.push(Math.round(remDisp));
+
+      const moRemaining = remUSD / cashUSD;
+      if (i === 0) colors.push('rgba(124,109,250,0.8)');
+      else if (remUSD <= 0) colors.push('rgba(255,77,106,0.8)');
+      else if (moRemaining > 0.5) colors.push('rgba(34,208,132,0.8)');
+      else if (moRemaining > 0.25) colors.push('rgba(245,166,35,0.8)');
+      else colors.push('rgba(255,77,106,0.8)');
+    }
+
+    const ctx = document.getElementById('cashChart').getContext('2d');
+    if (chartInstance) chartInstance.destroy();
+
+    const isDarkNow = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDarkNow ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+    const tickColor = isDarkNow ? '#6b6b80' : '#9099c0';
+    const bgColor   = isDarkNow ? '#14141f' : '#ffffff';
+
+    const statusMonths = cashUSD / netBurnUSD;
+    let lineColor;
+    if (statusMonths >= 6) lineColor = '#22d084';
+    else if (statusMonths >= 3) lineColor = '#f5a623';
+    else lineColor = '#ff4d6a';
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+    gradient.addColorStop(0, lineColor + '40');
+    gradient.addColorStop(1, lineColor + '00');
+
+    chartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            type: 'line',
+            label: 'Cash Remaining',
+            data,
+            borderColor: lineColor,
+            backgroundColor: gradient,
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointRadius: data.map((v, i) => (i === 0 || v === 0) ? 5 : 2),
+            pointBackgroundColor: lineColor,
+            pointBorderColor: bgColor,
+            pointBorderWidth: 2,
+            order: 1
+          },
+          {
+            type: 'bar',
+            label: 'Monthly Cash',
+            data,
+            backgroundColor: colors,
+            borderRadius: 4,
+            order: 2,
+            barPercentage: 0.5
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 800, easing: 'easeOutQuart' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: bgColor,
+            borderColor: 'rgba(255,255,255,0.1)',
+            borderWidth: 1,
+            titleColor: '#9898aa',
+            bodyColor: isDarkNow ? '#e8e8f0' : '#0d1030',
+            titleFont: { family: 'DM Mono', size: 11 },
+            bodyFont: { family: 'DM Mono', size: 12, weight: '500' },
+            callbacks: {
+              label: ctx => ' ' + fmt(ctx.raw, cDisp)
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: tickColor, font: { family: 'DM Mono', size: 10 }, maxRotation: 45, autoSkip: true, maxTicksLimit: 8 },
+            grid: { color: gridColor },
+            border: { color: gridColor }
+          },
+          y: {
+            ticks: {
+              color: tickColor,
+              font: { family: 'DM Mono', size: 10 },
+              callback: v => fmt(v, cDisp),
+              maxTicksLimit: 5
+            },
+            grid: { color: gridColor },
+            border: { color: gridColor }
+          }
+        }
+      }
+    });
+  }
+
+  function updateChartTheme() {
+    if (!chartInstance) return;
+    const isDarkNow = document.documentElement.getAttribute('data-theme') === 'dark';
+    const gridColor = isDarkNow ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+    const tickColor = isDarkNow ? '#6b6b80' : '#9099c0';
+    chartInstance.options.scales.x.grid.color = gridColor;
+    chartInstance.options.scales.y.grid.color = gridColor;
+    chartInstance.options.scales.x.ticks.color = tickColor;
+    chartInstance.options.scales.y.ticks.color = tickColor;
+    chartInstance.options.plugins.tooltip.backgroundColor = isDarkNow ? '#14141f' : '#ffffff';
+    chartInstance.options.plugins.tooltip.bodyColor = isDarkNow ? '#e8e8f0' : '#0d1030';
+    chartInstance.update();
+  }
+
+  // ═══════════════════════════════════════
+  // TABLE
+  // ═══════════════════════════════════════
+  function updateTable(cashUSD, netBurnUSD, months, cDisp) {
+    if (months <= 0) {
+      document.getElementById('proj-table-wrap').innerHTML = '<div class="empty-state"><div>No runway to project</div></div>';
+      return;
+    }
+
+    let rows = '';
+    for (let i = 1; i <= months; i++) {
+      const remUSD  = Math.max(0, cashUSD - netBurnUSD * i);
+      const remDisp = fromUSD(remUSD, cDisp);
+      const pct = (remUSD / cashUSD) * 100;
+      const color = pct > 50 ? '#22d084' : pct > 20 ? '#f5a623' : '#ff4d6a';
+      const isZero = remUSD <= 0;
+      rows += `
+        <tr>
+          <td class="proj-month">${getMonthLabel(i)}</td>
+          <td style="padding:10px 12px;"><div class="proj-bar-wrap"><div class="proj-bar-fill" style="width:${pct.toFixed(1)}%;background:${color};"></div></div></td>
+          <td class="proj-cash" style="text-align:right;${isZero ? 'color:var(--red);' : ''}">${isZero ? '— depleted —' : fmt(remDisp, cDisp)}</td>
+        </tr>`;
+    }
+
+    document.getElementById('proj-table-wrap').innerHTML = `
+      <table class="proj-table">
+        <thead><tr>
+          <th>Month</th>
+          <th style="padding-bottom:10px;">Health</th>
+          <th style="text-align:right;">Cash Remaining</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  // ═══════════════════════════════════════
+  // SCENARIOS
+  // ═══════════════════════════════════════
+  function updateScenarios(cashUSD, burnUSD, revUSD, currentMonths, cDisp) {
+    const netBurnUSD = burnUSD - revUSD;
+    const raiseUSD = toUSD(2500000, 'INR');
+    const s = [
+      { icon: '✂️', title: 'Cut burn 20%',   months: cashUSD / Math.max(1, netBurnUSD * 0.8), delta: cashUSD / Math.max(1, netBurnUSD * 0.8) - currentMonths },
+      { icon: '🚀', title: 'Double revenue', months: cashUSD / Math.max(1, burnUSD - revUSD * 2), delta: cashUSD / Math.max(1, burnUSD - revUSD * 2) - currentMonths },
+      { icon: '💵', title: 'Raise ₹25L',     months: (cashUSD + raiseUSD) / Math.max(1, netBurnUSD), delta: (cashUSD + raiseUSD) / Math.max(1, netBurnUSD) - currentMonths },
+      { icon: '🎯', title: 'Cut burn 40%',   months: cashUSD / Math.max(1, netBurnUSD * 0.6), delta: cashUSD / Math.max(1, netBurnUSD * 0.6) - currentMonths }
+    ];
+
+    const html = s.map(sc => {
+      const m = Math.min(sc.months, 120);
+      const d = sc.delta > 0 ? `+${Math.round(sc.delta)}mo` : `${Math.round(sc.delta)}mo`;
+      return `
+        <div class="scenario-card">
+          <div class="scenario-icon">${sc.icon}</div>
+          <div class="scenario-title">${sc.title}</div>
+          <div class="scenario-result">${Math.round(m)}mo runway · <span style="color:var(--green);">${d}</span></div>
+        </div>`;
+    }).join('');
+
+    document.getElementById('scenarios').innerHTML = html;
+  }
+
+  // ═══════════════════════════════════════
+  // SHARE
+  // ═══════════════════════════════════════
+  function shareResults() {
+    const cashRaw = parseFloat(document.getElementById('cash').value) || 0;
+    const burnRaw = parseFloat(document.getElementById('burn').value) || 0;
+    const revRaw  = parseFloat(document.getElementById('revenue').value) || 0;
+    const cCash = document.getElementById('currencyCash').value;
+    const cBurn = document.getElementById('currencyBurn').value;
+    const cRev  = document.getElementById('currencyRevenue').value;
+    const cDisp = getDisplayCurrency();
+
+    const cashUSD = toUSD(cashRaw, cCash);
+    const burnUSD = toUSD(burnRaw, cBurn);
+    const revUSD  = toUSD(revRaw, cRev);
+    const netBurnUSD = Math.max(0, burnUSD - revUSD);
+    const runway = netBurnUSD > 0 ? (cashUSD / netBurnUSD).toFixed(1) : '∞';
+    const text = `My startup has ${runway} months of runway (${fmt(fromUSD(cashUSD, cDisp), cDisp)} cash, ${fmt(fromUSD(netBurnUSD, cDisp), cDisp)}/mo net burn). Calculated with Runway Calculator.`;
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => showToast('Copied to clipboard!'));
+    } else {
+      showToast('Results: ' + runway + ' months');
+    }
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+</script>
+</body>
+</html>
